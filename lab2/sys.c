@@ -2570,10 +2570,10 @@ asmlinkage int sys_mysyscall(char *srcFile, char *dstFile)
 	mm_segment_t old_fs = get_fs();
 	set_fs(get_ds());
 	int i;
-	if((src > 0) & (dst > 0)) {
+	if((src > 0) && (dst > 0)) {
 		do {
-			i = sys_read(srcFile, buf, 4096);
-			sys_write(dstFile, buf, i);
+			i = sys_read(src, buf, 4096);
+			sys_write(dst, buf, i);
 		}while(i);
 	}
 	else {

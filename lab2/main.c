@@ -1,4 +1,8 @@
-asmlinkage int sys_mysyscall(char *srcFile, char *dstFile)
+#include<unistd.h>
+#include<syscall.h>
+
+int main()
 {
-    int src = sys_open(srcFile, O_RDONLY, 0);
+    syscall(520, "sys.c", "dst.txt");
+    return 0;
 }
