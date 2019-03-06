@@ -1,0 +1,1 @@
+cmd_/home/qyc/文档/OS_Course_Design/lab3/mydriver.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/qyc/文档/OS_Course_Design/lab3/mydriver.ko /home/qyc/文档/OS_Course_Design/lab3/mydriver.o /home/qyc/文档/OS_Course_Design/lab3/mydriver.mod.o ;  true
