@@ -2564,16 +2564,16 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
 
 asmlinkage int sys_mysyscall(char *srcFile, char *dstFile)
 {
-    int src = sys_open(srcFile, O_RDONLY, 0);
-	int dst = sys_open(dstFile, O_WRONLY|O_CREAT|O_TRUNC, 0600);
-	char buf[4096];
-	mm_segment_t old_fs = get_fs();
+    int src = sys_open(srcFile, O_RDONLY);	//打开源文件
+	int dst = sys_open(dstFile, O_WRONLY|O_CREAT|O_TRUNC, 0600);	//打开目标文件
+	char buf[4096];	//接受缓存
+	mm_segment_t old_fs = get_fs();	//设置内存访问范围
 	set_fs(get_ds());
 	int i;
-	if((src > 0) && (dst > 0)) {
+	if((src > 0) && (dst > 0)) {	//打开文件成功
 		do {
-			i = sys_read(src, buf, 4096);
-			sys_write(dst, buf, i);
+			i = sys_read(src, buf, 4096); //读取文件
+			sys_write(dst, buf, i);	//写入读取到的文件大小
 		}while(i);
 	}
 	else {
@@ -2581,6 +2581,6 @@ asmlinkage int sys_mysyscall(char *srcFile, char *dstFile)
 	}
 	sys_close(src);
 	sys_close(dst);
-	set_fs(old_fs);
+	set_fs(old_fs);	//恢复内存访问范围
 	return 0;
 }
