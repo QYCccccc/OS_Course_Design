@@ -3,7 +3,10 @@
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QStringList>
-
+#include <QDebug>
+#include<sstream>
+#include<string>
+#include <QElapsedTimer>
 int a0 = 0, a1 = 0, b0 = 0, b1 = 0;
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -18,9 +21,6 @@ MainWindow::MainWindow(QWidget *parent) :
                       this, SLOT(on_tabWidget_INFO_currentChanged(int)));
     timer->start(1000);
 }
-
-
-
 
 MainWindow::~MainWindow()
 {
@@ -73,9 +73,9 @@ void MainWindow::show_tabWidgetInfo(int index)
                 memTotal = memTotal.trimmed();
                 nMemTotal = memTotal.toInt()/1024;
             }
-            else if (pos = tempStr.indexOf("MemFree"), pos != -1)
+            else if (pos = tempStr.indexOf("MemAvailable"), pos != -1)
             {
-                memFree = tempStr.mid(pos+9, tempStr.length()-12);
+                memFree = tempStr.mid(pos+14, tempStr.length()-17);
                 memFree = memFree.trimmed();
                 nMemFree = memFree.toInt()/1024;
             }
@@ -115,75 +115,39 @@ void MainWindow::show_tabWidgetInfo(int index)
         tempFile.close(); //关闭内存信息文件
 
         int tt = 2; //取2个点采样计算cpu当前利用律
-        int cpuInfo[2][7];
-        int cpuTotal[2][2];
+        std::string cpu;
+        long int user, nice, sys, idle, iowait, irq, softirq;
+        long int all[2], idle_c[2];
+        int  usage;
+        QElapsedTimer t;
         while (tt)
         {
-            tempFile.setFileName("/proc/stat"); //打开CPU使用状态信息
+            tempFile.setFileName("/proc/stat"); //打开CPU使用状态信息,linux下用/proc/stat文件来计算cpu的利用率
+                                                //这个文件包含了所有CPU活动的信息，该文件中的所有值都是从系统启动开始累计到当前时刻。
             if ( !tempFile.open(QIODevice::ReadOnly) )
             {
                 QMessageBox::warning(this, tr("warning"), tr("The stat file can not open!"), QMessageBox::Yes);
                 return;
             }
             tempStr = tempFile.readLine();
-            for (int i = 0; i < 7; i++)
-            {
-                cpuInfo[2-tt][i] = tempStr.section(" ", i+1, i+1).toInt();
-                cpuTotal[1][2-tt] += cpuInfo[2-tt][i];
-                if (i == 3)
-                {
-                    cpuTotal[0][2-tt] += cpuInfo[2-tt][i];
-                }
-            }
+            std::istringstream strStream(tempStr.toStdString());
+            strStream>>cpu >> user >> nice >> sys
+                        >> idle >> iowait >> irq >> softirq;
+            all[tt-1] = user + nice + sys + idle +
+                        iowait + irq + softirq;
+            idle_c[tt -1] = idle;
+             qDebug()<<"idle="<<idle;
             tt--;
             tempFile.close(); //关闭stat文件
-        }
-        int a = cpuTotal[0][1] - cpuTotal[0][0];
-        int b = cpuTotal[1][1] - cpuTotal[1][0];
-        if (a < 0)
-        {
-            a = -a;
-        }
-        if (b < 0)
-        {
-            b = -b;
-        }
-        ui->progressBar_CPU->setValue(a*100/b);
-        tempFile.setFileName("/proc/stat");  //linux下用/proc/stat文件来计算cpu的利用率
-        //这个文件包含了所有CPU活动的信息，该文件中的所有值都是从系统启动开始累计到当前时刻。
 
-        if ( !tempFile.open(QIODevice::ReadOnly) )
-        {
-            QMessageBox::warning(this, tr("warning"), tr("The stat file can not open!"), QMessageBox::Yes);
-            return;
+            t.start();
+            while(t.elapsed()<500);
         }
-        tempStr = tempFile.readLine();
-        a0 = a1;
-        b0 = b1;
-        a1 = b1 = 0;
-        int gg;
-        for (int i = 0; i < 7; i++)
-        {
-            b1 += tempStr.section(" ", i+2, i+2).toInt();
-            gg = b1;
-            if (i == 3)
-            {
-                a1 += tempStr.section(" ", i+2, i+2).toInt();
-            }
-        }
-        int m, n;
-        m = a1 - a0;
-        n = b1 - b0;
-        if (m < 0)
-        {
-            m = -m;
-        }
-        if (n < 0)
-        {
-            n = -n;
-        }
-        ui->progressBar_CPU->setValue( (n-m)*100/n );
-        tempFile.close(); //关闭stat文件
+        if(all[0] - all[1]){
+         usage = (all[0] - all[1] - (idle_c[0] - idle_c[1]))*100 / (all[0] - all[1]);
+         ui->progressBar_CPU->setValue(usage);
+        } else
+            qDebug()<<"error\n";
     }
         else if (index == 1) //进程信息
         {
@@ -399,57 +363,57 @@ void MainWindow::show_tabWidgetInfo(int index)
             return;
         }
 
-        void MainWindow::on_pushButton_halt_clicked()
-        {
-            system("halt");
-        }
+void MainWindow::on_pushButton_halt_clicked()
+{
+    system("halt");
+}
 
-        void MainWindow::on_pushButton_reboot_clicked()
-        {
-            system("reboot");
-        }
+void MainWindow::on_pushButton_reboot_clicked()
+{
+    system("reboot");
+}
 
-        void MainWindow::on_tabWidget_INFO_currentChanged(int index)
-        {
-            show_tabWidgetInfo(index); //显示tab中的内容
-            return ;
-        }
+void MainWindow::on_tabWidget_INFO_currentChanged(int index)
+{
+    show_tabWidgetInfo(index); //显示tab中的内容
+    return ;
+}
 
-        //杀死进程
-        void MainWindow::on_pushButton_pkill_clicked()
-        {
-            //获得进程号
-            QListWidgetItem *item = ui->listWidget_process->currentItem();
-            QString pro = item->text();
-            pro = pro.section("\t", 0, 0);
-            system("kill " + pro.toLatin1());
-            QMessageBox::warning(this, tr("kill"), QString::fromUtf8("该进程已被杀死!"), QMessageBox::Yes);
-            //回到进程信息tab表
-            show_tabWidgetInfo(1);
-        }
+//杀死进程
+void MainWindow::on_pushButton_pkill_clicked()
+{
+    //获得进程号
+    QListWidgetItem *item = ui->listWidget_process->currentItem();
+    QString pro = item->text();
+    pro = pro.section("\t", 0, 0);
+    system("kill " + pro.toLatin1());
+    QMessageBox::warning(this, tr("kill"), QString::fromUtf8("该进程已被杀死!"), QMessageBox::Yes);
+    //回到进程信息tab表
+    show_tabWidgetInfo(1);
+}
 
-        //刷新进程信息
-        void MainWindow::on_pushButton_prefresh_clicked()
-        {
-            show_tabWidgetInfo(1);
-        }
+//刷新进程信息
+void MainWindow::on_pushButton_prefresh_clicked()
+{
+    show_tabWidgetInfo(1);
+}
 
-        void MainWindow::on_pushButton_Model_install_clicked()
-        {
-            show_tabWidgetInfo(2); //安装模块还不知道如何实现
-             QMessageBox::warning(this, tr("tip"), tr("安装模块还不知道如何实现"), QMessageBox::Yes);
-        }
+void MainWindow::on_pushButton_Model_install_clicked()
+{
+    show_tabWidgetInfo(2); //安装模块还不知道如何实现
+     QMessageBox::warning(this, tr("tip"), tr("安装模块还不知道如何实现"), QMessageBox::Yes);
+}
 
-        void MainWindow::on_pushButton_Model_remove_clicked()
-        {
-            show_tabWidgetInfo(2);
-            //卸载模块还不知道如何实现
-            QMessageBox::warning(this, tr("tip"), tr("卸载模块还不知道如何实现"), QMessageBox::Yes);
-        }
+void MainWindow::on_pushButton_Model_remove_clicked()
+{
+    show_tabWidgetInfo(2);
+    //卸载模块还不知道如何实现
+    QMessageBox::warning(this, tr("tip"), tr("卸载模块还不知道如何实现"), QMessageBox::Yes);
+}
 
 
-        void MainWindow::on_pushButton_Model_refresh_clicked()
-        {
-            show_tabWidgetInfo(2);
-            QMessageBox::warning(this, tr("tip"), tr("刷新模块还不知道如何实现"), QMessageBox::Yes);
-        }
+void MainWindow::on_pushButton_Model_refresh_clicked()
+{
+    show_tabWidgetInfo(2);
+    QMessageBox::warning(this, tr("tip"), tr("刷新模块还不知道如何实现"), QMessageBox::Yes);
+}
