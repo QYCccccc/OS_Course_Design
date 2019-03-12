@@ -202,7 +202,7 @@ void MainWindow::on_actionShutdown_triggered()
     QMessageBox::StandardButton rb = QMessageBox::warning(this, tr("warning"), 
                         tr("Power Off"),QMessageBox::Yes | QMessageBox::No);
     if(rb == QMessageBox::Yes) {
-//            system("reboot");    
+            system("halt");    
         qDebug() << "Power Off";
     }
 }
@@ -212,7 +212,7 @@ void MainWindow::on_actionReboot_triggered()
     QMessageBox::StandardButton rb = QMessageBox::warning(this, tr("warning"), 
                         tr("Reboot"),QMessageBox::Yes | QMessageBox::No);
     if(rb == QMessageBox::Yes) {
-//            system("reboot");    
+            system("reboot");    
         qDebug() << "reboot";
     }
 }
