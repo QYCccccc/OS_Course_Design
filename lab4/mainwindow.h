@@ -19,6 +19,21 @@ public:
 public slots:
     void RcvMsg_cpu(QStringList strlist);
     void RcvTimer();
+private slots:
+    void on_pushButton_kill_clicked();
+    
+    void on_actionShutdown_triggered();
+    
+    void on_actionReboot_triggered();
+    
+    void on_action_newproc_triggered();
+    
+    void on_action_exit_triggered();
+    
+    void on_action_refresh_triggered();
+    
+    void on_action_about_triggered();
+    
 private:
     void ShowModule();
     void ShowSysinfo();

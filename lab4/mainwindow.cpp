@@ -2,6 +2,13 @@
 #include "ui_mainwindow.h"
 #include<QFile>
 #include<QMessageBox>
+#include<QDir>
+#include<vector>
+#include<algorithm>
+#include<sys/types.h>
+#include<QLineEdit>
+#include<QInputDialog>
+#include<signal.h>
 #include<QDebug>
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -24,14 +31,21 @@ MainWindow::~MainWindow()
 }
 void MainWindow::RcvTimer(){
     int index = ui->tabWidget->currentIndex();
+    int rowcount;
     switch (index) {
     case 0:
         mCpu->start();
         break;
     case 1:
+        rowcount = ui->tableWidget_proc->rowCount();
+        for(int i = 0; i < rowcount; ++i)
+            ui->tableWidget_proc->removeRow(0);
         ShowProcess();
         break;
     case 2:
+        rowcount = ui->tableWidget_module->rowCount();
+        for(int i = 0; i < rowcount; ++i)
+            ui->tableWidget_module->removeRow(0);
         ShowModule();
         break;
     case 3:
@@ -55,18 +69,92 @@ void MainWindow::RcvMsg_cpu(QStringList strlist) {
     ui->progressBar_cpu->setValue(cpuR.toInt());
 }
 void MainWindow::ShowProcess() {
+    QDir dr("/proc");
+    QFile inFile;
+    QString tmpstr;
+    QStringList header;
+    ui->tableWidget_proc->verticalHeader()->setHidden(true);
+    ui->tableWidget_proc->setColumnCount(5);
+    header << "PID" << "名称" << "状态" << "优先级" << "内存";
+    ui->tableWidget_proc->setHorizontalHeaderLabels(header);
+    ui->tableWidget_proc->setEditTriggers(QAbstractItemView::NoEditTriggers);
     
+    ui->tableWidget_proc->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableWidget_proc->setSelectionMode(QAbstractItemView::SingleSelection);
+    bool isInt;
+    std::vector<int> vpid;
+    int pidInt;
+    QStringList drlist = dr.entryList();
+    for(int i = 0; i < drlist.length(); ++i){
+        pidInt = drlist.at(i).toInt(&isInt, 10);
+        if(isInt) {
+            vpid.push_back(pidInt);
+        }
+    }
+    std::sort(vpid.begin(), vpid.end());
+    int posa, posb;
+    int rowcount;
+    QString pName, pState, pPrio, pMem;
+    for(auto e : vpid) {
+        inFile.setFileName("/proc/" + QString::number(e) + "/stat");
+        if(!inFile.open(QIODevice::ReadOnly)) {
+            QMessageBox::warning(this, tr("warning"), tr("The pid stat file can not open!"), QMessageBox::Yes);
+            return;
+        }
+        tmpstr = inFile.readLine();
+        posa = tmpstr.indexOf("(");
+        posb = tmpstr.indexOf(")");
+        pName = tmpstr.mid(posa+1, posb-posa-1).trimmed();
+        pState = tmpstr.section(" ", 2, 2);
+        pPrio = tmpstr.section(" ", 17, 17);
+        pMem = QString::number(tmpstr.section(" ", 22, 22).toInt() / 1024);
+        rowcount = ui->tableWidget_proc->rowCount();
+        ui->tableWidget_proc->insertRow(rowcount);
+        ui->tableWidget_proc->setItem(rowcount, 0, new QTableWidgetItem(QString::number(e)));
+        ui->tableWidget_proc->setItem(rowcount, 1, new QTableWidgetItem(pName));
+        ui->tableWidget_proc->setItem(rowcount, 2, new QTableWidgetItem(pState));
+        ui->tableWidget_proc->setItem(rowcount, 3, new QTableWidgetItem(pPrio));            
+        ui->tableWidget_proc->setItem(rowcount, 4, new QTableWidgetItem(pMem + "MB"));
+        ui->tableWidget_proc->item(rowcount, 4)->setTextAlignment(Qt::AlignRight);
+        inFile.close();
+    }
+    ui->tableWidget_proc->resizeRowsToContents();
+    ui->tableWidget_proc->resizeColumnsToContents();
 }
 
 void MainWindow::ShowModule() {
+    QFile inFile;
+    inFile.setFileName("/proc/modules");
+    if(!inFile.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("warning"), tr("The modules file can not open!"), QMessageBox::Yes);
+        return ;
+    }
+    QString tempStr;
+    QString modName, modMem, modNum;
     QStringList header;
-    ui->tableWidget_module->adjustSize();
+    int rowcount;
     ui->tableWidget_module->setColumnCount(3);
     header << "名称" << "内存" << "使用次数";
     ui->tableWidget_module->setHorizontalHeaderLabels(header);
-    int rowcount = ui->tableWidget_module->rowCount();
-    ui->tableWidget_module->insertRow(rowcount);
+    ui->tableWidget_module->setEditTriggers(QAbstractItemView::NoEditTriggers);
     
+    ui->tableWidget_module->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableWidget_module->setSelectionMode(QAbstractItemView::SingleSelection);
+    //
+    while ((tempStr = inFile.readLine()) != nullptr) {
+        modName = tempStr.section(" ", 0, 0);
+        modMem = QString::number(tempStr.section(" ", 1, 1).toInt() / 1024);
+        modNum = tempStr.section(" ", 2, 2);
+        rowcount = ui->tableWidget_module->rowCount();
+        ui->tableWidget_module->insertRow(rowcount);
+        ui->tableWidget_module->setItem(rowcount, 0, new QTableWidgetItem(modName));
+        ui->tableWidget_module->setItem(rowcount, 1, new QTableWidgetItem(modMem + " MB"));
+        ui->tableWidget_module->item(rowcount, 1)->setTextAlignment(Qt::AlignRight);       
+        ui->tableWidget_module->setItem(rowcount, 2, new QTableWidgetItem(modNum));
+    }
+    ui->tableWidget_module->resizeRowsToContents();
+    ui->tableWidget_module->resizeColumnsToContents();
+    inFile.close();
 }
 
 void MainWindow::ShowSysinfo() {
@@ -78,7 +166,7 @@ void MainWindow::ShowSysinfo() {
         QMessageBox::warning(this, tr("warning"), tr("The cpuinfo file can not open!"),QMessageBox::Yes);
         return ;
     }
-    while((tempStr = inFile.readLine()) != NULL) {
+    while((tempStr = inFile.readLine()) != nullptr) {
         if((pos = tempStr.indexOf("model name")) != -1) {
             pos += 13;
             QString cpu_name = tempStr.mid(pos, tempStr.length());
@@ -112,4 +200,56 @@ void MainWindow::ShowSysinfo() {
     ui->label_sysinfo->adjustSize();
     ui->label_sysinfo->setText(versionStr);
     inFile.close();
+}
+
+void MainWindow::on_pushButton_kill_clicked()
+{
+    int row = ui->tableWidget_proc->currentRow();
+    QString pid = ui->tableWidget_proc->item(row, 0)->text();
+    QMessageBox::StandardButton rb = QMessageBox::warning(this, tr("warning"), 
+                        tr("Kill Process"),QMessageBox::Yes | QMessageBox::No);
+    if(rb == QMessageBox::Yes) {   
+        kill(pid.toInt(), SIGKILL);
+    }
+}
+
+void MainWindow::on_actionShutdown_triggered()
+{
+    QMessageBox::StandardButton rb = QMessageBox::warning(this, tr("warning"), 
+                        tr("Power Off"),QMessageBox::Yes | QMessageBox::No);
+    if(rb == QMessageBox::Yes) {
+//            system("reboot");    
+        qDebug() << "Power Off";
+    }
+}
+
+void MainWindow::on_actionReboot_triggered()
+{
+    QMessageBox::StandardButton rb = QMessageBox::warning(this, tr("warning"), 
+                        tr("Reboot"),QMessageBox::Yes | QMessageBox::No);
+    if(rb == QMessageBox::Yes) {
+//            system("reboot");    
+        qDebug() << "reboot";
+    }
+}
+
+void MainWindow::on_action_newproc_triggered()
+{
+    QString text = QInputDialog::getText(nullptr,"Input proc","please input proc cmd");
+    qDebug()<<text;
+}
+
+void MainWindow::on_action_exit_triggered()
+{
+    this->close();
+}
+
+void MainWindow::on_action_refresh_triggered()
+{
+    RcvTimer();
+}
+
+void MainWindow::on_action_about_triggered()
+{
+    QMessageBox::aboutQt(nullptr, "About Qt"); 
 }
