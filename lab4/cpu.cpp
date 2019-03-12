@@ -20,7 +20,7 @@ void cpu::run() {
     int pos;
     inFile.setFileName("/proc/meminfo");
     if(!inFile.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(NULL, tr("warning"),tr("The meminfo file can not open!"), QMessageBox::Yes);
+        QMessageBox::warning(nullptr, tr("warning"),tr("The meminfo file can not open!"), QMessageBox::Yes);
         return ;
     }
     QString memTotal;
@@ -30,7 +30,8 @@ void cpu::run() {
     QString swapTotal;
     QString swapFree;
     QString swapUsed;
-    int nMemTotal, nMemAvb, nMemUsed, nSwapTotal, nSwapFree, nSwapUsed;
+    int nMemTotal = 0, nMemAvb = 0, nMemUsed = 0,
+            nSwapTotal = 0, nSwapFree = 0, nSwapUsed = 0;
     while(true) {
         tempStr = inFile.readLine();
         pos = tempStr.indexOf("MemTotal");
@@ -82,7 +83,7 @@ void cpu::run() {
                                             //这个文件包含了所有CPU活动的信息，该文件中的所有值都是从系统启动开始累计到当前时刻。
         if ( !inFile.open(QIODevice::ReadOnly) )
         {
-            QMessageBox::warning(NULL, tr("warning"), tr("The stat file can not open!"), QMessageBox::Yes);
+            QMessageBox::warning(nullptr, tr("warning"), tr("The stat file can not open!"), QMessageBox::Yes);
             return;
         }
         tempStr = inFile.readLine();
@@ -92,7 +93,7 @@ void cpu::run() {
         all[tt-1] = user + nice + sys + idle +
                     iowait + irq + softirq;
         idle_c[tt -1] = idle;
-         qDebug()<<"idle="<<idle;
+//        qDebug()<<"idle="<<idle;
         tt--;
         inFile.close(); //关闭stat文件
 
@@ -100,7 +101,7 @@ void cpu::run() {
         while(t.elapsed()<500);
     }
     if(all[0] - all[1]){
-     usage = (all[0] - all[1] - (idle_c[0] - idle_c[1]))*100 / (all[0] - all[1]);
+     usage = static_cast<int>((all[0] - all[1] - (idle_c[0] - idle_c[1]))*100 / (all[0] - all[1]));
      strlist << QString::number(usage);
     } else
         qDebug()<<"error\n";

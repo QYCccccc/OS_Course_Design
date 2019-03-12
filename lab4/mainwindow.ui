@@ -243,26 +243,13 @@
      <attribute name="title">
       <string>进程</string>
      </attribute>
-     <widget class="QPushButton" name="pushButton_kill">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>470</y>
-        <width>99</width>
-        <height>27</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Kill</string>
-      </property>
-     </widget>
      <widget class="QTableWidget" name="tableWidget_proc">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>10</y>
         <width>651</width>
-        <height>451</height>
+        <height>481</height>
        </rect>
       </property>
      </widget>
@@ -452,6 +439,7 @@
     <property name="title">
      <string>文件</string>
     </property>
+    <addaction name="action"/>
     <addaction name="action_newproc"/>
     <addaction name="action_exit"/>
    </widget>
@@ -501,6 +489,12 @@
   <action name="action_about">
    <property name="text">
     <string>关于</string>
+   </property>
+  </action>
+  <action name="action">
+   <property name="text">
+    <string>结束进程
+</string>
    </property>
   </action>
  </widget>

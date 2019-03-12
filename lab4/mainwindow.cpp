@@ -31,21 +31,16 @@ MainWindow::~MainWindow()
 }
 void MainWindow::RcvTimer(){
     int index = ui->tabWidget->currentIndex();
-    int rowcount;
     switch (index) {
     case 0:
         mCpu->start();
         break;
     case 1:
-        rowcount = ui->tableWidget_proc->rowCount();
-        for(int i = 0; i < rowcount; ++i)
-            ui->tableWidget_proc->removeRow(0);
+        ui->tableWidget_proc->setRowCount(0);
         ShowProcess();
         break;
     case 2:
-        rowcount = ui->tableWidget_module->rowCount();
-        for(int i = 0; i < rowcount; ++i)
-            ui->tableWidget_module->removeRow(0);
+        ui->tableWidget_module->setRowCount(0);
         ShowModule();
         break;
     case 3:
@@ -107,7 +102,7 @@ void MainWindow::ShowProcess() {
         pName = tmpstr.mid(posa+1, posb-posa-1).trimmed();
         pState = tmpstr.section(" ", 2, 2);
         pPrio = tmpstr.section(" ", 17, 17);
-        pMem = QString::number(tmpstr.section(" ", 22, 22).toInt() / 1024);
+        pMem = QString::number((tmpstr.section(" ", 22, 22).toInt()) / (1024 * 1024));
         rowcount = ui->tableWidget_proc->rowCount();
         ui->tableWidget_proc->insertRow(rowcount);
         ui->tableWidget_proc->setItem(rowcount, 0, new QTableWidgetItem(QString::number(e)));
@@ -202,17 +197,6 @@ void MainWindow::ShowSysinfo() {
     inFile.close();
 }
 
-void MainWindow::on_pushButton_kill_clicked()
-{
-    int row = ui->tableWidget_proc->currentRow();
-    QString pid = ui->tableWidget_proc->item(row, 0)->text();
-    QMessageBox::StandardButton rb = QMessageBox::warning(this, tr("warning"), 
-                        tr("Kill Process"),QMessageBox::Yes | QMessageBox::No);
-    if(rb == QMessageBox::Yes) {   
-        kill(pid.toInt(), SIGKILL);
-    }
-}
-
 void MainWindow::on_actionShutdown_triggered()
 {
     QMessageBox::StandardButton rb = QMessageBox::warning(this, tr("warning"), 
@@ -235,8 +219,15 @@ void MainWindow::on_actionReboot_triggered()
 
 void MainWindow::on_action_newproc_triggered()
 {
-    QString text = QInputDialog::getText(nullptr,"Input proc","please input proc cmd");
-    qDebug()<<text;
+    bool isOK;
+    QString procName = QInputDialog::getText(nullptr,"Create proc","please input proc name",
+                                             QLineEdit::Normal,nullptr, &isOK);
+    if(isOK && !procName.isEmpty()){
+        system(procName.toStdString().c_str());
+    }
+    else {
+        qDebug()<<"Hahaha";
+    }
 }
 
 void MainWindow::on_action_exit_triggered()
@@ -252,4 +243,14 @@ void MainWindow::on_action_refresh_triggered()
 void MainWindow::on_action_about_triggered()
 {
     QMessageBox::aboutQt(nullptr, "About Qt"); 
+}
+
+void MainWindow::on_action_triggered()
+{
+    bool isOK;
+    QString pid = QInputDialog::getText(nullptr,"Kill process","please input process pid ",
+                                        QLineEdit::Normal,nullptr, &isOK);
+    if(isOK && !pid.isEmpty()) {
+        kill(pid.toInt(), SIGKILL);
+    }
 }
