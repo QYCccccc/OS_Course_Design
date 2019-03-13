@@ -14,11 +14,27 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 public slots:
     void RcvMsg_cpu(QStringList strlist);
     void RcvTimer();
+private slots:
+    
+    void on_actionShutdown_triggered();
+    
+    void on_actionReboot_triggered();
+    
+    void on_action_newproc_triggered();
+    
+    void on_action_exit_triggered();
+    
+    void on_action_refresh_triggered();
+    
+    void on_action_about_triggered();
+    
+    void on_action_triggered();
+    
 private:
     void ShowModule();
     void ShowSysinfo();
