@@ -16,12 +16,16 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     mCpu = new cpu;
+    //将发送cpu信息的函数和接受信息的函数关联起来
     connect(mCpu, SIGNAL(isMsg(QStringList)), this, SLOT(RcvMsg_cpu(QStringList)));
+    //使用定时器定期刷新页面
     mtimer = new QTimer(this);
     mtimer->setInterval(100);
     mtimer->setSingleShot(false);
     mtimer->start();
+    //当计时器超时后刷新当前页面
     connect(mtimer, SIGNAL(timeout()), this, SLOT(RcvTimer()));
+    //设置资源信息为默认首页
     ui->tabWidget->setCurrentIndex(0);
 }
 
@@ -36,10 +40,12 @@ void MainWindow::RcvTimer(){
         mCpu->start();
         break;
     case 1:
-        ui->tableWidget_proc->setRowCount(0);
+        ui->tableWidget_proc->clear();
+        ui->tableWidget_proc->setRowCount(0);   
         ShowProcess();
         break;
     case 2:
+        ui->tableWidget_module->clear();
         ui->tableWidget_module->setRowCount(0);
         ShowModule();
         break;
@@ -68,29 +74,36 @@ void MainWindow::ShowProcess() {
     QFile inFile;
     QString tmpstr;
     QStringList header;
+    //将首列显示的行号取消
     ui->tableWidget_proc->verticalHeader()->setHidden(true);
     ui->tableWidget_proc->setColumnCount(5);
+    //设置每列标题
     header << "PID" << "名称" << "状态" << "优先级" << "内存";
     ui->tableWidget_proc->setHorizontalHeaderLabels(header);
+    //禁止编辑
     ui->tableWidget_proc->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    
+    //选择一整行
     ui->tableWidget_proc->setSelectionBehavior(QAbstractItemView::SelectRows);
+    //设置只能选择一个单元
     ui->tableWidget_proc->setSelectionMode(QAbstractItemView::SingleSelection);
     bool isInt;
     std::vector<int> vpid;
     int pidInt;
     QStringList drlist = dr.entryList();
     for(int i = 0; i < drlist.length(); ++i){
+        //将pid号保存到一个数组中
         pidInt = drlist.at(i).toInt(&isInt, 10);
         if(isInt) {
             vpid.push_back(pidInt);
         }
     }
+    //将pid排序
     std::sort(vpid.begin(), vpid.end());
     int posa, posb;
     int rowcount;
     QString pName, pState, pPrio, pMem;
     for(auto e : vpid) {
+        //读取每个进程的信息
         inFile.setFileName("/proc/" + QString::number(e) + "/stat");
         if(!inFile.open(QIODevice::ReadOnly)) {
             QMessageBox::warning(this, tr("warning"), tr("The pid stat file can not open!"), QMessageBox::Yes);
@@ -100,6 +113,7 @@ void MainWindow::ShowProcess() {
         posa = tmpstr.indexOf("(");
         posb = tmpstr.indexOf(")");
         pName = tmpstr.mid(posa+1, posb-posa-1).trimmed();
+        //利用空格将字符串分割
         pState = tmpstr.section(" ", 2, 2);
         pPrio = tmpstr.section(" ", 17, 17);
         pMem = QString::number((tmpstr.section(" ", 22, 22).toInt()) / (1024 * 1024));
@@ -113,6 +127,7 @@ void MainWindow::ShowProcess() {
         ui->tableWidget_proc->item(rowcount, 4)->setTextAlignment(Qt::AlignRight);
         inFile.close();
     }
+    //设置单元格根据内容自动调整
     ui->tableWidget_proc->resizeRowsToContents();
     ui->tableWidget_proc->resizeColumnsToContents();
 }
@@ -202,7 +217,7 @@ void MainWindow::on_actionShutdown_triggered()
     QMessageBox::StandardButton rb = QMessageBox::warning(this, tr("warning"), 
                         tr("Power Off"),QMessageBox::Yes | QMessageBox::No);
     if(rb == QMessageBox::Yes) {
-            system("halt");    
+            system("poweroff");    
         qDebug() << "Power Off";
     }
 }
@@ -223,6 +238,7 @@ void MainWindow::on_action_newproc_triggered()
     QString procName = QInputDialog::getText(nullptr,"Create proc","please input proc name",
                                              QLineEdit::Normal,nullptr, &isOK);
     if(isOK && !procName.isEmpty()){
+        procName += " &";
         system(procName.toStdString().c_str());
     }
     else {
